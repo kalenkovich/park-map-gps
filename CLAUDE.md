@@ -1,0 +1,138 @@
+# Project: [Working name TBD] — Park Map GPS Navigator
+
+## What this is
+A mobile app: photograph a physical park/trail map, pin a few reference
+points against a real map, and get your live GPS position overlaid on
+the photographed map. Built primarily to learn React Native/Expo +
+TypeScript and to practice working with an AI coding agent — not
+(primarily) to chase a competitive product. See `/docs/goals.md` for
+the full context and priority order.
+
+## Current phase
+**Phase 0 — web prototype of the core alignment logic.**
+Goal: prove that a photographed map + 3–4 reference points can be
+transformed into an accurate real-world coordinate mapping, before any
+mobile/camera/GPS plumbing exists. See `/docs/mvp-scope.md` for the
+phase breakdown and what's explicitly out of scope right now.
+
+Do not start Phase 1 (React Native app) work until Phase 0's transform
+module is validated against a real walk-test (see Definition of Done
+below).
+
+## Stack
+- Phase 0: plain TypeScript + Leaflet/OpenStreetMap, static site, no
+  backend. Runs in-browser for fast iteration.
+- Phase 1+: Expo (React Native) + TypeScript, `expo-camera`,
+  `expo-location`. The Phase 0 transform module should be imported
+  as-is, not rewritten.
+- No backend/accounts/cloud sync in MVP. Local persistence only.
+
+## Working rules for Claude Code
+
+1. **Explain before big changes.** For anything beyond a small fix,
+   describe the approach in plain terms before writing code. I'm
+   learning this stack — narrate non-obvious API choices and
+   TypeScript patterns as you go, don't just produce working code
+   silently.
+2. **Small, reviewable commits.** One logical change per commit; don't
+   bundle unrelated changes. See *Git workflow* below for message
+   format and merge strategy.
+3. **Stay in scope.** Don't add features, abstractions, or "nice to
+   have while I'm in here" changes beyond what was asked. Flag ideas
+   instead of implementing them unprompted.
+4. **Ask before adding a dependency.** New npm packages, especially
+   anything beyond the Expo-managed ecosystem, get flagged first with
+   a one-line reason.
+5. **Tests for the math, not for everything.** The coordinate
+   transform logic (Phase 0 core) needs unit tests with known
+   input/output pairs. UI code doesn't need the same rigor at this
+   stage.
+6. **No premature mobile-ification.** While in Phase 0, don't
+   introduce React Native-specific code or Expo config — keep it a
+   plain web/TS project until the phase's Definition of Done is met.
+7. **Surface uncertainty.** If there are multiple reasonable ways to
+   do something (e.g., which transform library, how to structure the
+   pinning UI state), briefly present the options and a recommendation
+   rather than silently picking one.
+
+## Git workflow
+
+### Commit messages
+Use [Conventional Commits](https://www.conventionalcommits.org/): a
+type prefix, an optional scope, and a short imperative summary:
+
+```
+feat(transform): compute inverse affine matrix
+fix(ui): correct pin drag offset on retina displays
+docs: add walk-test results to Definition of Done
+refactor(transform): extract solveAffine into its own module
+test(transform): add synthetic round-trip cases
+chore: update vitest to 1.x
+```
+
+This applies to every commit — ones Claude Code makes on your behalf
+and ones you write yourself.
+
+### Commit size
+One logical change per commit (reinforces rule #2). If a change
+touches both the transform module and the UI, split it into two
+commits.
+
+### Merge strategy
+Always use `--no-ff -m` — never fast-forward:
+
+```sh
+git merge --no-ff -m "chore: merge <branch> into main" <branch>
+```
+
+Keeps branch topology visible in the log. Claude Code will follow
+this when creating merge commits on your behalf.
+
+### Authorship and AI attribution
+
+Keep me as the Git `Author` for all commits. I review the final change and take responsibility for what is committed.
+
+When an AI model makes a substantial contribution to a commit, add a `Co-Authored-By:` trailer to the commit message identifying the actual model that contributed.
+
+Use these rules:
+
+* Add AI co-authorship whenever the model wrote, rewrote, or materially shaped a non-trivial part of the committed implementation.
+* Add AI co-authorship when the model supplied an algorithm, architecture, data model, API design, debugging solution, or other substantive technical approach that was incorporated into the commit, even if I later edited the resulting code.
+* Add AI co-authorship when I primarily directed, reviewed, tested, or refined code that the model substantially produced.
+* Do not omit attribution merely because I modified, reformatted, renamed, reorganized, or partially rewrote AI-generated code before committing it.
+* Do not add AI co-authorship for genuinely minor assistance, such as explanations, documentation lookup, code review without substantive changes, trivial debugging hints, formatting, naming suggestions, or isolated small edits.
+* When it is genuinely unclear whether the contribution was substantial, prefer adding the `Co-Authored-By:` trailer.
+* If multiple AI models contributed substantially, add a separate `Co-Authored-By:` trailer for each.
+* Identify the actual backend model that made the contribution, not merely the frontend, agent, editor, or tool through which it was accessed.
+* Do not replace me as the Git `Author`, even if most or all of the implementation was generated by an AI model.
+
+Example:
+
+```text
+feat(transform): compute inverse affine matrix
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+```
+
+The purpose of this convention is to make substantial AI contribution visible in commit history while keeping responsibility for the committed change with me.
+
+## Definition of Done — Phase 0
+- [ ] Can upload/display a map photo in-browser
+- [ ] Can pin 3+ reference points (photo pixel ↔ real lat/lon via
+      embedded Leaflet map)
+- [ ] Computes and inverts an affine transform from those points
+- [ ] Given an arbitrary lat/lon, correctly projects a dot onto the
+      photo (verified with synthetic test cases)
+- [ ] Validated once against a real park visit: physically walk to 3+
+      known spots, compare actual GPS reading to where the app places
+      you on the photographed map, document the error margin
+- [ ] Transform module has unit tests and is cleanly separated from
+      any UI/Leaflet-specific code, ready to be imported unchanged
+      into the Phase 1 RN app
+
+## Open questions / decisions log
+(Keep this updated as decisions get made — helps future-you and future
+Claude Code sessions understand *why*, not just *what*.)
+- Similarity vs. affine transform: affine chosen by default to handle
+  non-uniform map distortion ("artistic errors" in hand-drawn maps);
+  revisit if Phase 0 testing shows it overfits with only 3 points.
