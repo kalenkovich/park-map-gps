@@ -4,10 +4,17 @@ import {
   type MapBundle,
 } from './bundle';
 import { computeTransform, type AffineTransform } from './transform';
+import { createPhotoViewport } from './photo-viewport';
 
-const statusEl    = document.getElementById('status') as HTMLSpanElement;
-const photoEl     = document.getElementById('photo') as HTMLImageElement;
-const importInput = document.getElementById('import-input') as HTMLInputElement;
+const statusEl       = document.getElementById('status') as HTMLSpanElement;
+const photoEl        = document.getElementById('photo') as HTMLImageElement;
+const photoPanel     = document.getElementById('photo-panel') as HTMLDivElement;
+const photoContainer = document.getElementById('photo-container') as HTMLDivElement;
+const importInput    = document.getElementById('import-input') as HTMLInputElement;
+
+const viewport = createPhotoViewport(photoPanel, photoContainer, photoEl);
+// Fit + centre once the image has laid out (a new src re-fires `load`).
+photoEl.addEventListener('load', () => viewport.reset());
 
 // `null` until a bundle has been loaded successfully.
 let loaded: { bundle: MapBundle; transform: AffineTransform } | null = null;

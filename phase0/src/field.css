@@ -12,6 +12,7 @@ body {
 
 #toolbar {
   flex-shrink: 0;
+  height: 48px; /* fixed: the #photo max-height below subtracts it */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -39,14 +40,24 @@ body {
   font-size: 0.875rem;
 }
 
-/* The photo scrolls inside its container; it is scaled to the screen width. */
-#photo-container {
+#photo-panel {
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;  /* stacking context for the absolutely-positioned container */
+  background: #111;
 }
 
+/* Positioned absolutely so photo-viewport.ts can drive translate+scale freely */
+#photo-container {
+  position: absolute;
+  transform-origin: 0 0;
+  line-height: 0; /* collapse inline whitespace under the img */
+}
+
+/* Scale 1 = the whole photo fits the screen below the 48px toolbar. */
 #photo {
   display: block;
-  width: 100%;
-  height: auto;
+  max-width: 100vw;
+  max-height: calc(100dvh - 48px);
 }
