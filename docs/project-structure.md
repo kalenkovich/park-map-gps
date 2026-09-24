@@ -55,6 +55,8 @@ and direct edits are usually wrong.
 | `phase0/src/main.ts` | TypeScript entry point — currently the Vite placeholder; will become the Phase 0 app. | Hand-edit |
 | `phase0/field.html` | HTML entry point for the field viewer (phone page): a "Load bundle" button and the map photo. No Leaflet. Loads `src/field.ts`. | Hand-edit |
 | `phase0/src/field.ts` | Field viewer logic: loads a bundle from a file picker, validates it (`parseBundle`), computes the transform (`computeTransform`), saves it to localStorage under the same key as the editor (`BUNDLE_STORAGE_KEY`), and restores it on the next visit — so on one origin it picks up the editor's last saved bundle. | Hand-edit |
+| `phase0/src/photo-viewport.ts` | Photo zoom + pan shared by the editor (and, later, the field viewer): mouse wheel zoom and drag pan. Contains the pure `zoomAt` math and `createPhotoViewport(panel, container, photo, isReady)`. | Hand-edit |
+| `phase0/src/photo-viewport.test.ts` | Unit tests for `zoomAt` (cursor-anchored zoom, scale clamping). | Hand-edit |
 | `phase0/src/field.css` | Styles for `field.html` (dark toolbar, photo scaled to screen width). | Hand-edit |
 | `phase0/vite.config.ts` | Vite config listing both HTML pages (`index.html`, `field.html`) as build inputs; without it `vite build` would only bundle the editor. | Hand-edit |
 | `phase0/public/favicon.svg` | Static asset served as-is by Vite (the default Vite logo). | Hand-edit / replace |

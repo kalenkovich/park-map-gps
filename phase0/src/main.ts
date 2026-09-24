@@ -17,6 +17,7 @@ import {
   BUNDLE_VERSION,
   BUNDLE_STORAGE_KEY as STORAGE_KEY,
 } from './bundle';
+import { createPhotoViewport } from './photo-viewport';
 
 // --- DOM ---
 const photoEl          = document.getElementById('photo')             as HTMLImageElement;
@@ -63,66 +64,10 @@ const pairMarkers: L.CircleMarker[] = [];
 let liveCursorMapMarker: L.CircleMarker | null = null;
 let liveCursorPhotoDot: HTMLDivElement | null = null;
 
-// --- Photo zoom + pan ---
-// tx/ty: translation of #photo-container's top-left within #photo-panel (px)
-// scale: zoom multiplier (1 = fit-to-panel, no zoom)
-let tx = 0, ty = 0, scale = 1;
-
-function initZoom(): void {
-  tx = (photoPanel.offsetWidth  - photoEl.offsetWidth)  / 2;
-  ty = (photoPanel.offsetHeight - photoEl.offsetHeight) / 2;
-  scale = 1;
-  applyZoom();
-}
-
-function applyZoom(): void {
-  photoContainer.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
-}
-
-photoPanel.addEventListener('wheel', (e) => {
-  if (!state.photoReady) return;
-  e.preventDefault();
-  const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
-  const newScale = Math.max(1, Math.min(20, scale * factor));
-  if (newScale === 1) {
-    initZoom(); // re-centre when fully zoomed out
-    return;
-  }
-  // Keep the point under the cursor fixed
-  const rect = photoPanel.getBoundingClientRect();
-  const cx = e.clientX - rect.left;
-  const cy = e.clientY - rect.top;
-  tx = cx - (cx - tx) * (newScale / scale);
-  ty = cy - (cy - ty) * (newScale / scale);
-  scale = newScale;
-  applyZoom();
-}, { passive: false });
-
-// Pan: track drag on the panel; suppress the click event if we actually moved.
-let dragOrigin: { x: number; y: number; tx: number; ty: number } | null = null;
-let didDrag = false;
-
-photoPanel.addEventListener('mousedown', (e) => {
-  if (!state.photoReady) return;
-  if (e.button !== 0) return;
-  e.preventDefault(); // prevent native image drag taking over mouse events
-  dragOrigin = { x: e.clientX, y: e.clientY, tx, ty };
-  didDrag = false;
-});
-
-window.addEventListener('mousemove', (e) => {
-  if (dragOrigin === null) return;
-  const dx = e.clientX - dragOrigin.x;
-  const dy = e.clientY - dragOrigin.y;
-  if (!didDrag && Math.hypot(dx, dy) > 3) didDrag = true;
-  if (didDrag) {
-    tx = dragOrigin.tx + dx;
-    ty = dragOrigin.ty + dy;
-    applyZoom();
-  }
-});
-
-window.addEventListener('mouseup', () => { dragOrigin = null; });
+// --- Photo zoom + pan (shared with the field viewer) ---
+const viewport = createPhotoViewport(
+  photoPanel, photoContainer, photoEl, () => state.photoReady,
+);
 
 // --- Helpers ---
 function pixelFromMouseEvent(e: MouseEvent): PixelPoint {
@@ -158,7 +103,7 @@ function loadPhotoSrc(src: string, onReady: () => void): void {
     state.photoReady = true;
     photoHint.classList.add('hidden');
     photoContainer.classList.remove('hidden');
-    initZoom();
+    viewport.reset();
     onReady();
   }, { once: true });
 
@@ -190,7 +135,7 @@ openPhotoInput.addEventListener('change', () => {
 
 // --- Pinning: click handlers ---
 photoEl.addEventListener('click', (e) => {
-  if (didDrag) return; // was a pan, not a pin
+  if (viewport.wasDragged()) return; // was a pan, not a pin
   if (state.transform !== null) return;
   state.pendingPixel = pixelFromMouseEvent(e);
   render();
