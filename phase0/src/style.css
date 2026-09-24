@@ -12,10 +12,31 @@ body {
 
 #toolbar {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 8px 12px;
   background: #2a2a2a;
   border-bottom: 1px solid #444;
 }
+
+#status {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+button {
+  padding: 4px 12px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #333;
+  color: #eee;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+button:disabled        { opacity: 0.4; cursor: default; }
+button:not(:disabled):hover { background: #444; }
 
 #panels {
   flex: 1;
@@ -43,7 +64,21 @@ body {
   display: block;
   max-width: calc(50vw - 1px);
   max-height: calc(100vh - 48px);
+  cursor: crosshair;
 }
+
+/* Pin-dot overlays positioned inside #photo-container */
+.pin-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.pin-dot--completed { background: #e55; }
+.pin-dot--pending   { background: #55e; }
 
 #map-panel { flex: 1; }
 #map       { width: 100%; height: 100%; }
