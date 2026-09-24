@@ -22,6 +22,23 @@ Steps:
 
 See CLAUDE.md's Definition of Done for Phase 0's exit criteria.
 
+### Known gaps in Phase 0 (deferred, not forgotten)
+Found while building the editor and field viewer; deliberately left for
+later so they don't block the Definition of Done.
+- **No re-fit on rotate/resize.** The photo is fitted and centred only
+  when it loads (`viewport.reset()` in `photo-viewport.ts`), so rotating
+  the phone or resizing the window leaves the view mis-fitted until the
+  photo is reloaded.
+- **Panning isn't bounded.** You can drag the photo entirely out of the
+  panel. It should stop once a photo edge meets the panel edge (and the
+  zoom-out re-centre should stay consistent with that).
+- **localStorage's ~5 MB limit.** Large photos may not persist. Cloud
+  storage is planned before public sharing, so this is accepted for now
+  (see the decisions log in CLAUDE.md).
+- **Unfriendly error on collinear anchors.** `computeTransform` does
+  throw, but with the solver's raw "LU matrix is singular", which is what
+  the field page would show. A clearer message can wait.
+
 ## Phase 1 — Mobile MVP (Expo/React Native/TypeScript)
 Smallest real, usable app:
 - Camera or photo-library capture of the map image

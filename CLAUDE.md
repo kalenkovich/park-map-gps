@@ -164,3 +164,10 @@ Claude Code sessions understand *why*, not just *what*.)
   it light. The split also keeps each page's code simple, and the field
   viewer previews the core Phase 1 screen — a photo with a live GPS dot
   and nothing else.
+- Bundle storage is localStorage for now (~5 MB per origin): both pages
+  keep the whole bundle, photo included as a data URL, under one shared
+  key. A full-resolution photo can exceed that quota; the pages show a
+  "could not save" note instead of failing. Accepted for Phase 0 — cloud
+  storage will be added before the project is shared publicly, so no
+  compression/chunking workaround is planned. See "Known gaps" in
+  `docs/mvp-scope.md`.
