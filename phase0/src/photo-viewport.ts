@@ -85,6 +85,9 @@ export function createPhotoViewport(
   function apply(): void {
     container.style.transform =
       `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
+    // Overlay CSS can divide by this to keep a dot's on-screen size constant:
+    //   transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+    container.style.setProperty('--zoom', String(view.scale));
   }
 
   function reset(): void {
