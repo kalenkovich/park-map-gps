@@ -61,3 +61,31 @@ body {
   max-width: 100vw;
   max-height: calc(100dvh - 48px);
 }
+
+/* The dot sits inside the zoomed container, so it would grow with the photo.
+   photo-viewport.ts sets --zoom on the container; dividing by it keeps the
+   dot the same size on screen at any zoom. */
+#gps-dot {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #38f;
+  border: 2px solid #fff;
+  transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+  pointer-events: none;
+}
+
+#gps-status {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 0.75rem;
+  color: #ccc;
+  pointer-events: none;
+}
+#gps-status:empty { display: none; }
+#gps-status.error { color: #f88; }
