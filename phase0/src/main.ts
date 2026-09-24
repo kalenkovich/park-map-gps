@@ -65,9 +65,7 @@ let liveCursorMapMarker: L.CircleMarker | null = null;
 let liveCursorPhotoDot: HTMLDivElement | null = null;
 
 // --- Photo zoom + pan (shared with the field viewer) ---
-const viewport = createPhotoViewport(
-  photoPanel, photoContainer, photoEl, () => state.photoReady,
-);
+const viewport = createPhotoViewport(photoPanel, photoContainer, photoEl);
 
 // --- Helpers ---
 function pixelFromMouseEvent(e: MouseEvent): PixelPoint {

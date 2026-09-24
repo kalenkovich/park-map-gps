@@ -1,5 +1,7 @@
 // Zoom + pan for a photo inside a clipping panel, shared by the editor and
-// the field viewer: mouse wheel zooms about the cursor, mouse drag pans.
+// the field viewer. Handles mouse (wheel zoom, drag pan) and touch (one-finger
+// pan, two-finger pinch) through the Pointer Events API, which treats both
+// uniformly.
 //
 // DOM contract (both pages use the same shape):
 //   <div panel>            position: relative; overflow: hidden
@@ -32,10 +34,12 @@ export function zoomAt(view: View, cx: number, cy: number, factor: number): View
   };
 }
 
+type Point = { x: number; y: number };
+
 export type PhotoViewport = {
   /** Fit the photo to the panel, centred, at scale 1. Call after the photo loads. */
   reset(): void;
-  /** True if the last mouse gesture moved (was a pan, not a click). */
+  /** True if the last pointer gesture moved (was a pan/pinch, not a tap). */
   wasDragged(): boolean;
 };
 
@@ -43,11 +47,22 @@ export function createPhotoViewport(
   panel: HTMLElement,
   container: HTMLElement,
   photo: HTMLImageElement,
-  isReady: () => boolean,
 ): PhotoViewport {
   let view: View = { tx: 0, ty: 0, scale: 1 };
-  let dragOrigin: { x: number; y: number; view: View } | null = null;
   let didDrag = false;
+
+  // Pointers currently down (client coordinates), keyed by pointerId.
+  const pointers = new Map<number, Point>();
+  // One pointer down → pan; two → pinch. At most one of these is non-null.
+  let panAnchor: { pointer: Point; view: View } | null = null;
+  let pinchPrev: { dist: number; mid: Point } | null = null;
+
+  // Without this the browser claims touch drags for page scrolling/zooming
+  // and we'd get pointercancel instead of pointermove.
+  panel.style.touchAction = 'none';
+  panel.style.userSelect = 'none';
+
+  const isReady = (): boolean => photo.complete && photo.naturalWidth > 0;
 
   function apply(): void {
     container.style.transform =
@@ -63,42 +78,95 @@ export function createPhotoViewport(
     apply();
   }
 
+  function toPanel(p: Point): Point {
+    const rect = panel.getBoundingClientRect();
+    return { x: p.x - rect.left, y: p.y - rect.top };
+  }
+
+  function zoomBy(centre: Point, factor: number): void {
+    const c = toPanel(centre);
+    view = zoomAt(view, c.x, c.y, factor);
+    if (view.scale === MIN_SCALE) reset(); // re-centre when fully zoomed out
+    else apply();
+  }
+
+  // Distance between and midpoint of the two pinch pointers.
+  function measurePinch(): { dist: number; mid: Point } {
+    const [a, b] = [...pointers.values()] as [Point, Point];
+    return {
+      dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), // never 0: it's a divisor
+      mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+    };
+  }
+
+  // Re-derive the gesture from how many pointers are down. Called whenever a
+  // pointer arrives or leaves, so e.g. lifting one finger of a pinch hands
+  // over to a pan from the current view without a jump.
+  function beginGesture(): void {
+    panAnchor = null;
+    pinchPrev = null;
+    if (pointers.size === 1) {
+      const [pointer] = [...pointers.values()] as [Point];
+      panAnchor = { pointer, view };
+    } else if (pointers.size === 2) {
+      pinchPrev = measurePinch();
+    }
+  }
+
+  // --- Mouse wheel ---
   panel.addEventListener('wheel', (e) => {
     if (!isReady()) return;
     e.preventDefault();
-    const rect = panel.getBoundingClientRect();
-    view = zoomAt(
-      view,
-      e.clientX - rect.left,
-      e.clientY - rect.top,
-      e.deltaY < 0 ? WHEEL_STEP : 1 / WHEEL_STEP,
-    );
-    if (view.scale === MIN_SCALE) reset(); // re-centre when fully zoomed out
-    else apply();
+    zoomBy({ x: e.clientX, y: e.clientY }, e.deltaY < 0 ? WHEEL_STEP : 1 / WHEEL_STEP);
   }, { passive: false });
 
-  // Pan: track drag on the panel; wasDragged() lets click handlers ignore the
-  // click that ends a drag.
-  panel.addEventListener('mousedown', (e) => {
+  // --- Pointers ---
+  // We deliberately don't call setPointerCapture: capture would retarget the
+  // `click` event to the panel and break the editor's click-on-photo pinning.
+  // Move/up go on `window` so a drag that leaves the panel still tracks.
+  panel.addEventListener('pointerdown', (e) => {
     if (!isReady()) return;
-    if (e.button !== 0) return;
-    e.preventDefault(); // prevent native image drag taking over mouse events
-    dragOrigin = { x: e.clientX, y: e.clientY, view };
-    didDrag = false;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (pointers.size === 0) didDrag = false;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    beginGesture();
   });
 
-  window.addEventListener('mousemove', (e) => {
-    if (dragOrigin === null) return;
-    const dx = e.clientX - dragOrigin.x;
-    const dy = e.clientY - dragOrigin.y;
-    if (!didDrag && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) didDrag = true;
-    if (didDrag) {
-      view = { ...dragOrigin.view, tx: dragOrigin.view.tx + dx, ty: dragOrigin.view.ty + dy };
-      apply();
+  window.addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (panAnchor !== null) {
+      const dx = e.clientX - panAnchor.pointer.x;
+      const dy = e.clientY - panAnchor.pointer.y;
+      if (!didDrag && Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) didDrag = true;
+      if (didDrag) {
+        view = { ...panAnchor.view, tx: panAnchor.view.tx + dx, ty: panAnchor.view.ty + dy };
+        apply();
+      }
+    } else if (pinchPrev !== null) {
+      const now = measurePinch();
+      didDrag = true;
+      // Follow the fingers' midpoint (pan), then scale about it (zoom).
+      view = {
+        ...view,
+        tx: view.tx + (now.mid.x - pinchPrev.mid.x),
+        ty: view.ty + (now.mid.y - pinchPrev.mid.y),
+      };
+      zoomBy(now.mid, now.dist / pinchPrev.dist);
+      pinchPrev = now;
     }
   });
 
-  window.addEventListener('mouseup', () => { dragOrigin = null; });
+  function release(e: PointerEvent): void {
+    if (!pointers.delete(e.pointerId)) return;
+    beginGesture();
+  }
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+
+  // The browser's native image drag would otherwise take over the gesture.
+  container.addEventListener('dragstart', (e) => e.preventDefault());
 
   return { reset, wasDragged: () => didDrag };
 }
