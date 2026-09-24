@@ -27,7 +27,11 @@ body {
 }
 
 button,
+#open-photo-label,
 #import-label {
+  /* appearance: none strips Windows/Chromium native button chrome that
+     otherwise overrides background-color and text colour */
+  appearance: none;
   padding: 4px 12px;
   border: 1px solid #555;
   border-radius: 4px;
@@ -36,9 +40,10 @@ button,
   cursor: pointer;
   font-size: 0.875rem;
 }
-button:disabled        { opacity: 0.4; cursor: default; }
+button:disabled           { opacity: 0.4; cursor: default; }
 button:not(:disabled):hover,
-#import-label:hover    { background: #444; }
+#open-photo-label:hover,
+#import-label:hover        { background: #444; }
 
 #panels {
   flex: 1;
@@ -54,12 +59,26 @@ button:not(:disabled):hover,
   background: #111;
 }
 
+/* Centred hint shown before a photo is opened */
+#photo-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+#photo-hint.hidden { display: none; }
+
 /* Positioned absolutely so JS can drive translate+scale freely */
 #photo-container {
   position: absolute;
   transform-origin: 0 0;
   line-height: 0; /* collapse inline whitespace under the img */
 }
+#photo-container.hidden { display: none; }
 
 #photo {
   display: block;

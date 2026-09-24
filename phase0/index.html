@@ -10,6 +10,10 @@
   <body>
     <div id="toolbar">
       <span id="status"></span>
+      <label id="open-photo-label">
+        <span id="open-photo-text">Open map photo</span>
+        <input id="open-photo-input" type="file" accept="image/*" hidden />
+      </label>
       <button id="compute-btn" disabled>Compute transform</button>
       <button id="reset-btn" hidden>Reset</button>
       <button id="export-btn" hidden>Export bundle</button>
@@ -20,8 +24,9 @@
     </div>
     <div id="panels">
       <div id="photo-panel">
+        <div id="photo-hint">Open a map photo to begin</div>
         <div id="photo-container">
-          <img id="photo" src="/jerusalem-old-city.png" alt="Map of Jerusalem Old City" />
+          <img id="photo" alt="Map photo" />
         </div>
       </div>
       <div id="map-panel">

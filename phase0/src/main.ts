@@ -10,25 +10,32 @@ import {
 } from './transform';
 import { serializeBundle, parseBundle, BundleParseError, BUNDLE_VERSION } from './bundle';
 
+const STORAGE_KEY = 'park-map-bundle';
+
 // --- DOM ---
-const photoEl        = document.getElementById('photo')           as HTMLImageElement;
-const photoContainer = document.getElementById('photo-container') as HTMLDivElement;
-const photoPanel     = document.getElementById('photo-panel')     as HTMLDivElement;
-const statusEl       = document.getElementById('status')          as HTMLSpanElement;
-const computeBtn     = document.getElementById('compute-btn')     as HTMLButtonElement;
-const resetBtn       = document.getElementById('reset-btn')       as HTMLButtonElement;
-const exportBtn      = document.getElementById('export-btn')      as HTMLButtonElement;
-const importInput    = document.getElementById('import-input')    as HTMLInputElement;
-const mapDiv         = document.getElementById('map')             as HTMLDivElement;
+const photoEl          = document.getElementById('photo')             as HTMLImageElement;
+const photoContainer   = document.getElementById('photo-container')   as HTMLDivElement;
+const photoHint        = document.getElementById('photo-hint')        as HTMLDivElement;
+const photoPanel       = document.getElementById('photo-panel')       as HTMLDivElement;
+const statusEl         = document.getElementById('status')            as HTMLSpanElement;
+const openPhotoInput   = document.getElementById('open-photo-input')  as HTMLInputElement;
+const openPhotoText    = document.getElementById('open-photo-text')   as HTMLSpanElement;
+const computeBtn       = document.getElementById('compute-btn')       as HTMLButtonElement;
+const resetBtn         = document.getElementById('reset-btn')         as HTMLButtonElement;
+const exportBtn        = document.getElementById('export-btn')        as HTMLButtonElement;
+const importInput      = document.getElementById('import-input')      as HTMLInputElement;
+const mapDiv           = document.getElementById('map')               as HTMLDivElement;
 
 // --- State ---
 type AppState = {
+  photoReady: boolean;
   pairs: ReferencePair[];
   pendingPixel: PixelPoint | null;
   transform: AffineTransform | null;
 };
 
 const state: AppState = {
+  photoReady: false,
   pairs: [],
   pendingPixel: null,
   transform: null,
@@ -62,6 +69,7 @@ function applyZoom(): void {
 }
 
 photoPanel.addEventListener('wheel', (e) => {
+  if (!state.photoReady) return;
   e.preventDefault();
   const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
   const newScale = Math.max(1, Math.min(20, scale * factor));
@@ -84,6 +92,7 @@ let dragOrigin: { x: number; y: number; tx: number; ty: number } | null = null;
 let didDrag = false;
 
 photoPanel.addEventListener('mousedown', (e) => {
+  if (!state.photoReady) return;
   if (e.button !== 0) return;
   e.preventDefault(); // prevent native image drag taking over mouse events
   dragOrigin = { x: e.clientX, y: e.clientY, tx, ty };
@@ -103,12 +112,6 @@ window.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('mouseup', () => { dragOrigin = null; });
-
-if (photoEl.complete) {
-  initZoom();
-} else {
-  photoEl.addEventListener('load', initZoom, { once: true });
-}
 
 // --- Helpers ---
 function pixelFromMouseEvent(e: MouseEvent): PixelPoint {
@@ -132,6 +135,48 @@ function positionDot(dot: HTMLDivElement, pixel: PixelPoint): void {
   dot.style.top  = (pixel.y / photoEl.naturalHeight * photoEl.offsetHeight) + 'px';
 }
 
+// --- Open photo ---
+function loadPhotoSrc(src: string, onReady: () => void): void {
+  // Clear any stale live cursors before swapping the image.
+  liveCursorMapMarker?.remove();
+  liveCursorMapMarker = null;
+  liveCursorPhotoDot?.remove();
+  liveCursorPhotoDot = null;
+
+  photoEl.addEventListener('load', () => {
+    state.photoReady = true;
+    photoHint.classList.add('hidden');
+    photoContainer.classList.remove('hidden');
+    initZoom();
+    onReady();
+  }, { once: true });
+
+  photoEl.src = src;
+}
+
+openPhotoInput.addEventListener('change', () => {
+  const file = openPhotoInput.files?.[0];
+  if (!file) return;
+  openPhotoInput.value = '';
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    // Opening a new photo resets all pinning state and clears the saved bundle
+    // (the old pairs don't apply to the new photo).
+    state.pairs = [];
+    state.pendingPixel = null;
+    state.transform = null;
+    state.photoReady = false;
+    pairMarkers.forEach((m) => m.remove());
+    pairMarkers.length = 0;
+    localStorage.removeItem(STORAGE_KEY);
+
+    loadPhotoSrc(reader.result as string, render);
+    render(); // update controls immediately (photo not yet loaded)
+  };
+  reader.readAsDataURL(file);
+});
+
 // --- Pinning: click handlers ---
 photoEl.addEventListener('click', (e) => {
   if (didDrag) return; // was a pan, not a pin
@@ -154,6 +199,7 @@ leafletMap.on('click', (e: L.LeafletMouseEvent) => {
 // --- Compute / Reset ---
 computeBtn.addEventListener('click', () => {
   state.transform = computeTransform(state.pairs);
+  saveToLocalStorage(buildBundleJson());
   render();
 });
 
@@ -168,25 +214,36 @@ resetBtn.addEventListener('click', () => {
   render();
 });
 
-// --- Export bundle ---
-exportBtn.addEventListener('click', () => {
-  if (state.transform === null) return;
-
-  // Draw the photo onto an offscreen canvas to get a data URL.
+// --- Bundle helpers ---
+function buildBundleJson(): string {
   const canvas = document.createElement('canvas');
   canvas.width  = photoEl.naturalWidth;
   canvas.height = photoEl.naturalHeight;
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   canvas.getContext('2d')!.drawImage(photoEl, 0, 0);
-  const photoDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-
-  const json = serializeBundle({
+  return serializeBundle({
     version: BUNDLE_VERSION,
-    photoDataUrl,
+    photoDataUrl:  canvas.toDataURL('image/jpeg', 0.92),
     naturalWidth:  photoEl.naturalWidth,
     naturalHeight: photoEl.naturalHeight,
     pairs: state.pairs,
   });
+}
+
+function saveToLocalStorage(json: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, json);
+  } catch {
+    // QuotaExceededError — image too large to cache; silently skip
+  }
+}
+
+// --- Export bundle ---
+exportBtn.addEventListener('click', () => {
+  if (state.transform === null) return;
+
+  const json = buildBundleJson();
+  saveToLocalStorage(json);
 
   const blob = new Blob([json], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
@@ -198,6 +255,22 @@ exportBtn.addEventListener('click', () => {
 });
 
 // --- Import bundle ---
+function restoreBundle(json: string): void {
+  const bundle = parseBundle(json); // throws BundleParseError on invalid input
+
+  state.pairs        = bundle.pairs;
+  state.pendingPixel = null;
+  state.transform    = computeTransform(bundle.pairs);
+  state.photoReady   = false;
+
+  pairMarkers.forEach((m) => m.remove());
+  pairMarkers.length = 0;
+
+  saveToLocalStorage(json);
+  loadPhotoSrc(bundle.photoDataUrl, render);
+  render(); // update controls while photo loads
+}
+
 importInput.addEventListener('change', () => {
   const file = importInput.files?.[0];
   if (!file) return;
@@ -206,18 +279,7 @@ importInput.addEventListener('change', () => {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const bundle = parseBundle(reader.result as string);
-
-      // Swap photo source to the embedded data URL.
-      photoEl.src = bundle.photoDataUrl;
-
-      // Restore state.
-      state.pairs        = bundle.pairs;
-      state.pendingPixel = null;
-      state.transform    = computeTransform(bundle.pairs);
-
-      // Re-centre zoom once the image has loaded at its new src.
-      photoEl.addEventListener('load', () => { initZoom(); render(); }, { once: true });
+      restoreBundle(reader.result as string);
     } catch (err) {
       const msg = err instanceof BundleParseError ? err.message : 'Unknown error reading bundle';
       statusEl.textContent = `Import failed: ${msg}`;
@@ -299,7 +361,16 @@ function renderMapMarkers(): void {
 }
 
 function renderControls(): void {
+  openPhotoText.textContent = state.photoReady ? 'Replace map photo' : 'Open map photo';
   const count = state.pairs.length;
+  if (!state.photoReady) {
+    statusEl.textContent = 'Open a map photo to begin';
+    computeBtn.disabled = true;
+    computeBtn.hidden = false;
+    resetBtn.hidden  = true;
+    exportBtn.hidden = true;
+    return;
+  }
   if (state.transform !== null) {
     statusEl.textContent = `Transform active (${count} pairs) — move mouse over either map`;
     computeBtn.hidden = true;
@@ -326,4 +397,15 @@ function renderControls(): void {
   }
 }
 
-render();
+// --- Auto-restore last bundle from localStorage ---
+const savedBundle = localStorage.getItem(STORAGE_KEY);
+if (savedBundle) {
+  try {
+    restoreBundle(savedBundle);
+  } catch {
+    localStorage.removeItem(STORAGE_KEY); // stale or corrupt — discard
+    render();
+  }
+} else {
+  render();
+}
