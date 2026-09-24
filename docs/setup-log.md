@@ -65,3 +65,20 @@ npm install ml-matrix
 
 Used by `src/transform.ts` to solve the overdetermined affine system
 via normal equations.
+
+## 2026-09-24 — Phase 0: multi-page build config for field.html
+
+No install commands. Added `phase0/vite.config.ts` by hand, listing
+`index.html` (editor) and `field.html` (field viewer) under
+`build.rolldownOptions.input`. Vite's dev server serves any root-level
+`.html` automatically, but `vite build` only bundles the pages listed
+here. (Vite 8 uses `rolldownOptions`; `rollupOptions` is deprecated.)
+
+Verified:
+
+```
+cd phase0
+npm run build
+```
+
+`dist/` contains both `index.html` and `field.html`.
