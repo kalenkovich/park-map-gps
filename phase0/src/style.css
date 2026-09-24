@@ -26,7 +26,8 @@ body {
   color: #aaa;
 }
 
-button {
+button,
+#import-label {
   padding: 4px 12px;
   border: 1px solid #555;
   border-radius: 4px;
@@ -36,7 +37,8 @@ button {
   font-size: 0.875rem;
 }
 button:disabled        { opacity: 0.4; cursor: default; }
-button:not(:disabled):hover { background: #444; }
+button:not(:disabled):hover,
+#import-label:hover    { background: #444; }
 
 #panels {
   flex: 1;

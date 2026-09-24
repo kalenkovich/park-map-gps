@@ -8,6 +8,7 @@ import {
   type PixelPoint,
   type AffineTransform,
 } from './transform';
+import { serializeBundle, parseBundle, BundleParseError, BUNDLE_VERSION } from './bundle';
 
 // --- DOM ---
 const photoEl        = document.getElementById('photo')           as HTMLImageElement;
@@ -16,6 +17,8 @@ const photoPanel     = document.getElementById('photo-panel')     as HTMLDivElem
 const statusEl       = document.getElementById('status')          as HTMLSpanElement;
 const computeBtn     = document.getElementById('compute-btn')     as HTMLButtonElement;
 const resetBtn       = document.getElementById('reset-btn')       as HTMLButtonElement;
+const exportBtn      = document.getElementById('export-btn')      as HTMLButtonElement;
+const importInput    = document.getElementById('import-input')    as HTMLInputElement;
 const mapDiv         = document.getElementById('map')             as HTMLDivElement;
 
 // --- State ---
@@ -165,6 +168,64 @@ resetBtn.addEventListener('click', () => {
   render();
 });
 
+// --- Export bundle ---
+exportBtn.addEventListener('click', () => {
+  if (state.transform === null) return;
+
+  // Draw the photo onto an offscreen canvas to get a data URL.
+  const canvas = document.createElement('canvas');
+  canvas.width  = photoEl.naturalWidth;
+  canvas.height = photoEl.naturalHeight;
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  canvas.getContext('2d')!.drawImage(photoEl, 0, 0);
+  const photoDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  const json = serializeBundle({
+    version: BUNDLE_VERSION,
+    photoDataUrl,
+    naturalWidth:  photoEl.naturalWidth,
+    naturalHeight: photoEl.naturalHeight,
+    pairs: state.pairs,
+  });
+
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'bundle.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// --- Import bundle ---
+importInput.addEventListener('change', () => {
+  const file = importInput.files?.[0];
+  if (!file) return;
+  importInput.value = ''; // reset so the same file can be re-imported
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const bundle = parseBundle(reader.result as string);
+
+      // Swap photo source to the embedded data URL.
+      photoEl.src = bundle.photoDataUrl;
+
+      // Restore state.
+      state.pairs        = bundle.pairs;
+      state.pendingPixel = null;
+      state.transform    = computeTransform(bundle.pairs);
+
+      // Re-centre zoom once the image has loaded at its new src.
+      photoEl.addEventListener('load', () => { initZoom(); render(); }, { once: true });
+    } catch (err) {
+      const msg = err instanceof BundleParseError ? err.message : 'Unknown error reading bundle';
+      statusEl.textContent = `Import failed: ${msg}`;
+    }
+  };
+  reader.readAsText(file);
+});
+
 // --- Live sync: mousemove handlers ---
 photoEl.addEventListener('mousemove', (e) => {
   if (state.transform === null) return;
@@ -242,22 +303,26 @@ function renderControls(): void {
   if (state.transform !== null) {
     statusEl.textContent = `Transform active (${count} pairs) — move mouse over either map`;
     computeBtn.hidden = true;
-    resetBtn.hidden = false;
+    resetBtn.hidden  = false;
+    exportBtn.hidden = false;
   } else if (state.pendingPixel !== null) {
     statusEl.textContent = `Pair ${count + 1}: now click the matching point on the map`;
     computeBtn.disabled = true;
     computeBtn.hidden = false;
-    resetBtn.hidden = true;
+    resetBtn.hidden  = true;
+    exportBtn.hidden = true;
   } else if (count === 0) {
     statusEl.textContent = 'Click a known point on the photo to start pinning';
     computeBtn.disabled = true;
     computeBtn.hidden = false;
-    resetBtn.hidden = true;
+    resetBtn.hidden  = true;
+    exportBtn.hidden = true;
   } else {
     statusEl.textContent = `${count} pair${count !== 1 ? 's' : ''} — click the photo to add more`;
     computeBtn.disabled = count < 3;
     computeBtn.hidden = false;
-    resetBtn.hidden = true;
+    resetBtn.hidden  = true;
+    exportBtn.hidden = true;
   }
 }
 
