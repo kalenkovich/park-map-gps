@@ -79,6 +79,7 @@ button:not(:disabled):hover { background: #444; }
 }
 .pin-dot--completed { background: #e55; }
 .pin-dot--pending   { background: #55e; }
+.pin-dot--live      { background: #4c4; }
 
 #map-panel { flex: 1; }
 #map       { width: 100%; height: 100%; }
