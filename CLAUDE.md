@@ -54,6 +54,13 @@ below).
    do something (e.g., which transform library, how to structure the
    pinning UI state), briefly present the options and a recommendation
    rather than silently picking one.
+8. **Log setup/scaffolding commands.** When asked to run setup or
+   scaffolding commands, run them, confirm they succeeded, and only
+   then append a dated entry to `docs/setup-log.md` following its
+   existing format. Log the commands as actually run (including any
+   correction after a failed attempt), not the first thing tried —
+   the log is a reproducibility record, not a trial-and-error
+   transcript. Don't log anything until it has actually succeeded.
 
 ## Git workflow
 
