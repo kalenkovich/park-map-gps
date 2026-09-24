@@ -124,18 +124,31 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 The purpose of this convention is to make substantial AI contribution visible in commit history while keeping responsibility for the committed change with me.
 
 ## Definition of Done — Phase 0
-- [ ] Can upload/display a map photo in-browser
-- [ ] Can pin 3+ reference points (photo pixel ↔ real lat/lon via
-      embedded Leaflet map)
-- [ ] Computes and inverts an affine transform from those points
-- [ ] Given an arbitrary lat/lon, correctly projects a dot onto the
-      photo (verified with synthetic test cases)
-- [ ] Validated once against a real park visit: physically walk to 3+
-      known spots, compare actual GPS reading to where the app places
-      you on the photographed map, document the error margin
-- [ ] Transform module has unit tests and is cleanly separated from
-      any UI/Leaflet-specific code, ready to be imported unchanged
-      into the Phase 1 RN app
+
+### Editor (index.html — laptop)
+- [x] Upload a map photo, pin 3+ reference points against an embedded
+      Leaflet map
+- [x] Verify fit via live synced cursors on both maps
+- [ ] Export a JSON bundle: map photo embedded as a data URL + anchor
+      pairs with pixel coordinates in the image's natural resolution
+
+### Transform module
+- [x] Affine transform: computes from 3+ reference pairs
+      (least-squares), inverts analytically, projects in both
+      directions
+- [x] Unit tests with synthetic cases; module is free of
+      UI/Leaflet/DOM dependencies and ready to import unchanged into
+      Phase 1
+
+### Field viewer (field.html — phone)
+- [ ] Imports the JSON bundle and shows a live GPS dot on the photo;
+      no Leaflet, no tile loading
+- [ ] Deployed over HTTPS (Vercel or Netlify) so the Geolocation API
+      works on the phone
+
+### Field test
+- [ ] At the park: check the dot at 3+ spots not used as anchors,
+      document the error margin
 
 ## Open questions / decisions log
 (Keep this updated as decisions get made — helps future-you and future
@@ -143,3 +156,9 @@ Claude Code sessions understand *why*, not just *what*.)
 - Similarity vs. affine transform: affine chosen by default to handle
   non-uniform map distortion ("artistic errors" in hand-drawn maps);
   revisit if Phase 0 testing shows it overfits with only 3 points.
+- Two-page structure (editor + field viewer): the editor (index.html)
+  runs on a laptop with Leaflet for anchor placement; the field viewer
+  (field.html) runs on a phone with no Leaflet or tile loading, keeping
+  it light. The split also keeps each page's code simple, and the field
+  viewer previews the core Phase 1 screen — a photo with a live GPS dot
+  and nothing else.
