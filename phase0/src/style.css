@@ -47,16 +47,15 @@ button:not(:disabled):hover { background: #444; }
 #photo-panel {
   flex: 1;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;  /* stacking context for absolutely-positioned container */
   border-right: 1px solid #444;
   background: #111;
 }
 
-/* Shrink-wraps the <img>; anchors absolutely-positioned overlays later */
+/* Positioned absolutely so JS can drive translate+scale freely */
 #photo-container {
-  position: relative;
+  position: absolute;
+  transform-origin: 0 0;
   line-height: 0; /* collapse inline whitespace under the img */
 }
 
