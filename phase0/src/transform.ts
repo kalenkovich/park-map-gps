@@ -59,6 +59,9 @@ export function projectPixelToGeo(
   };
 }
 
+// Below this, the transform is treated as singular (see projectGeoToPixel).
+const MIN_SIN_ANGLE = 1e-6;
+
 /**
  * Project a geographic point back to pixel coordinates using the analytically
  * inverted forward transform.
@@ -75,8 +78,15 @@ export function projectGeoToPixel(
 ): PixelPoint {
   const { a, b, c, d, e, f } = transform;
   const det = a * e - b * d;
-  if (Math.abs(det) < 1e-12) {
-    throw new Error('Transform is degenerate (determinant ≈ 0)');
+  // The coefficients are degrees per pixel, so det (units (°/px)²) is tiny and
+  // shrinks with photo resolution — an absolute cutoff would reject real
+  // high-resolution photos. Compare it to the size of the two rows instead:
+  // |det| / (‖(a,b)‖·‖(d,e)‖) is the sine of the angle between the lat and lon
+  // gradients. It is ~1 for a sane map and ~0 only when the anchors are
+  // (nearly) collinear, whatever the scale.
+  const scale = Math.hypot(a, b) * Math.hypot(d, e);
+  if (scale === 0 || Math.abs(det) < MIN_SIN_ANGLE * scale) {
+    throw new Error('Transform is degenerate (lat and lon gradients are parallel)');
   }
   return {
     x: (e * geo.lat - b * geo.lon + b * f - c * e) / det,

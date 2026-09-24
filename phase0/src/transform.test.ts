@@ -3,6 +3,7 @@ import {
   computeTransform,
   projectPixelToGeo,
   projectGeoToPixel,
+  type AffineTransform,
   type ReferencePair,
 } from './transform';
 
@@ -83,5 +84,37 @@ describe('transform', () => {
     const inv = projectGeoToPixel(t, fwd);
     expectClose(inv.x, 3);
     expectClose(inv.y, 2);
+  });
+});
+
+describe('projectGeoToPixel degeneracy check', () => {
+  it('accepts a realistic high-resolution photo (4000×3000 px over ~400×300 m)', () => {
+    // Coefficients are degrees per pixel, so with this many pixels they are
+    // ~1e-6 and the determinant (units (°/px)²) is ~1e-12 — the check must be
+    // relative to the transform's scale, not an absolute constant.
+    const M_PER_DEG_LAT = 111_320;
+    const lat0 = 32;
+    const lon0 = 35;
+    const dLatPerPx = 300 / 3000 / M_PER_DEG_LAT;
+    const dLonPerPx = 400 / 4000 / (M_PER_DEG_LAT * Math.cos((lat0 * Math.PI) / 180));
+    // North-up: lat decreases down the image, lon increases to the right.
+    const pair = (x: number, y: number): ReferencePair => ({
+      pixel: { x, y },
+      geo: { lat: lat0 - y * dLatPerPx, lon: lon0 + x * dLonPerPx },
+    });
+    const t = computeTransform([pair(0, 0), pair(4000, 0), pair(0, 3000), pair(4000, 3000)]);
+
+    const geo = projectPixelToGeo(t, { x: 1234, y: 567 });
+    const px = projectGeoToPixel(t, geo); // must not throw
+    expect(Math.abs(px.x - 1234)).toBeLessThan(1e-3);
+    expect(Math.abs(px.y - 567)).toBeLessThan(1e-3);
+  });
+
+  it('rejects a degenerate transform (parallel lat/lon gradients) at any scale', () => {
+    // Rows (a,b) and (d,e) are parallel, so the matrix is singular.
+    for (const s of [1, 1e-6, 1e-9]) {
+      const t: AffineTransform = { a: s, b: 2 * s, c: 0, d: 2 * s, e: 4 * s, f: 0 };
+      expect(() => projectGeoToPixel(t, { lat: 0, lon: 0 })).toThrow(/degenerate/);
+    }
   });
 });
