@@ -131,6 +131,8 @@ The purpose of this convention is to make substantial AI contribution visible in
 - [x] Verify fit via live synced cursors on both maps
 - [ ] Export a JSON bundle: map photo embedded as a data URL + anchor
       pairs with pixel coordinates in the image's natural resolution
+- [ ] Import a JSON bundle back into the editor to verify the
+      round-trip (photo, pairs, and transform all restored correctly)
 
 ### Transform module
 - [x] Affine transform: computes from 3+ reference pairs
