@@ -1,5 +1,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
+import 'leaflet-geosearch/dist/geosearch.css';
 import {
   computeTransform,
   projectPixelToGeo,
@@ -47,6 +49,11 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution:
     '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 }).addTo(leafletMap);
+
+leafletMap.addControl(GeoSearchControl({
+  provider: new OpenStreetMapProvider(),
+  style: 'bar',
+}));
 
 const pairMarkers: L.CircleMarker[] = [];
 let liveCursorMapMarker: L.CircleMarker | null = null;

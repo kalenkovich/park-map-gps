@@ -46,6 +46,16 @@ npm install -D vitest
 
 Added a `test` script to `phase0/package.json`: `vitest run`.
 
+## 2026-09-24 — Phase 0: add leaflet-geosearch for map location search
+
+```
+cd phase0
+npm install leaflet-geosearch
+```
+
+Used in `src/main.ts` to add an `OpenStreetMapProvider`-backed
+`GeoSearchControl` to the Leaflet map (no API key required).
+
 ## 2026-09-24 — Phase 0: add ml-matrix for least-squares solver
 
 ```

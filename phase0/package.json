@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "leaflet": "^1.9.4",
+    "leaflet-geosearch": "^4.4.0",
     "ml-matrix": "^6.15.0"
   }
 }
