@@ -10,9 +10,13 @@ import {
   type PixelPoint,
   type AffineTransform,
 } from './transform';
-import { serializeBundle, parseBundle, BundleParseError, BUNDLE_VERSION } from './bundle';
-
-const STORAGE_KEY = 'park-map-bundle';
+import {
+  serializeBundle,
+  parseBundle,
+  BundleParseError,
+  BUNDLE_VERSION,
+  BUNDLE_STORAGE_KEY as STORAGE_KEY,
+} from './bundle';
 
 // --- DOM ---
 const photoEl          = document.getElementById('photo')             as HTMLImageElement;

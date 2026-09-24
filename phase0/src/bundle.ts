@@ -6,6 +6,10 @@ import type { ReferencePair } from './transform';
 
 export const BUNDLE_VERSION = 1 as const;
 
+// localStorage key shared by the editor and the field viewer, so on one
+// origin the field page picks up whatever bundle the editor last saved.
+export const BUNDLE_STORAGE_KEY = 'park-map-bundle';
+
 export type MapBundle = {
   version: typeof BUNDLE_VERSION;
   photoDataUrl: string;   // "data:image/jpeg;base64,…"
