@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Park Map — Field</title>
+    <link rel="stylesheet" href="/src/field.css" />
+  </head>
+  <body>
+    <div id="toolbar">
+      <span id="status">Load a bundle to begin</span>
+      <label id="import-label">
+        Load bundle
+        <input id="import-input" type="file" accept=".json" hidden />
+      </label>
+    </div>
+    <div id="photo-container">
+      <img id="photo" alt="Map photo" hidden />
+    </div>
+    <script type="module" src="/src/field.ts"></script>
+  </body>
+</html>
