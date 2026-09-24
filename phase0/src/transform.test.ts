@@ -85,6 +85,17 @@ describe('transform', () => {
     expectClose(inv.x, 3);
     expectClose(inv.y, 2);
   });
+
+  it('rejects collinear anchors (the fit is underdetermined)', () => {
+    // All three pixels lie on the line y = x, so nothing pins down the
+    // transform in the perpendicular direction.
+    const pairs: ReferencePair[] = [
+      { pixel: { x: 0, y: 0 }, geo: { lat: 0, lon: 0 } },
+      { pixel: { x: 1, y: 1 }, geo: { lat: 1, lon: 1 } },
+      { pixel: { x: 2, y: 2 }, geo: { lat: 2, lon: 2 } },
+    ];
+    expect(() => computeTransform(pairs)).toThrow();
+  });
 });
 
 describe('projectGeoToPixel degeneracy check', () => {
