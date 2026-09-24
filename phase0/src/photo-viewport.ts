@@ -8,6 +8,8 @@
 //     <div container>      position: absolute; transform-origin: 0 0
 //       <img photo>        sized by CSS to "fit the panel" (that is scale 1)
 
+import type { PixelPoint } from './transform';
+
 export type View = {
   tx: number;    // translation of the container's top-left within the panel (px)
   ty: number;
@@ -32,6 +34,22 @@ export function zoomAt(view: View, cx: number, cy: number, factor: number): View
     ty: cy - (cy - view.ty) * k,
     scale,
   };
+}
+
+/**
+ * Place an overlay element (a dot, say) at `pixel`, given in the photo's
+ * natural-resolution pixels. `el` must be a child of the container, which is
+ * where the coordinates it gets live.
+ */
+export function positionOnPhoto(
+  el: HTMLElement,
+  pixel: PixelPoint,
+  photo: HTMLImageElement,
+): void {
+  // offsetWidth/Height is the layout size (unaffected by the CSS transform on
+  // the container), so these coordinates live in the container's local space.
+  el.style.left = (pixel.x / photo.naturalWidth  * photo.offsetWidth)  + 'px';
+  el.style.top  = (pixel.y / photo.naturalHeight * photo.offsetHeight) + 'px';
 }
 
 type Point = { x: number; y: number };

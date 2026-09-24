@@ -17,7 +17,7 @@ import {
   BUNDLE_VERSION,
   BUNDLE_STORAGE_KEY as STORAGE_KEY,
 } from './bundle';
-import { createPhotoViewport } from './photo-viewport';
+import { createPhotoViewport, positionOnPhoto } from './photo-viewport';
 
 // --- DOM ---
 const photoEl          = document.getElementById('photo')             as HTMLImageElement;
@@ -80,13 +80,6 @@ function createDot(type: 'completed' | 'pending' | 'live'): HTMLDivElement {
   const dot = document.createElement('div');
   dot.className = `pin-dot pin-dot--${type}`;
   return dot;
-}
-
-function positionDot(dot: HTMLDivElement, pixel: PixelPoint): void {
-  // offsetWidth/Height is the layout size (unaffected by CSS transform on the
-  // parent), so these coordinates live in #photo-container's local space.
-  dot.style.left = (pixel.x / photoEl.naturalWidth  * photoEl.offsetWidth)  + 'px';
-  dot.style.top  = (pixel.y / photoEl.naturalHeight * photoEl.offsetHeight) + 'px';
 }
 
 // --- Open photo ---
@@ -270,7 +263,7 @@ leafletMap.on('mousemove', (e: L.LeafletMouseEvent) => {
     liveCursorPhotoDot = createDot('live');
     photoContainer.appendChild(liveCursorPhotoDot);
   }
-  positionDot(liveCursorPhotoDot, pixel);
+  positionOnPhoto(liveCursorPhotoDot, pixel, photoEl);
 });
 
 leafletMap.on('mouseout', () => {
@@ -290,12 +283,12 @@ function renderPhotoDots(): void {
   for (const pair of state.pairs) {
     const dot = createDot('completed');
     photoContainer.appendChild(dot);
-    positionDot(dot, pair.pixel);
+    positionOnPhoto(dot, pair.pixel, photoEl);
   }
   if (state.pendingPixel !== null) {
     const dot = createDot('pending');
     photoContainer.appendChild(dot);
-    positionDot(dot, state.pendingPixel);
+    positionOnPhoto(dot, state.pendingPixel, photoEl);
   }
 }
 
